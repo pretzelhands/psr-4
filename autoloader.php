@@ -1,19 +1,17 @@
 <?php
 
-$configuration = json_decode(
-    file_get_contents('conductor.json'),
-    true
-);
+$rootDirectory = __DIR__;
 
-$namespaces = $configuration['autoload']['psr-4'];
-
-function fqcnToPath(string $fqcn, string $prefix) {
-    $relativeClass = ltrim($fqcn, $prefix);
-
-    return str_replace('\\', '/', $relativeClass) . '.php';
+if (file_exists($rootDirectory . '/conductor.json')) {
+    $configuration = json_decode(
+        file_get_contents($rootDirectory . '/conductor.json'),
+        true
+    );
 }
 
-spl_autoload_register(function (string $class) use ($namespaces) {
+$namespaces = !empty($configuration['autoload']['psr-4']) ? $configuration['autoload']['psr-4'] : [];
+
+spl_autoload_register(function (string $class) use ($namespaces, $rootDirectory) {
     $prefix = strtok($class, '\\') . '\\';
 
     // We don't handle that namespace.
@@ -21,7 +19,8 @@ spl_autoload_register(function (string $class) use ($namespaces) {
     if (!array_key_exists($prefix, $namespaces)) return;
 
     $baseDirectory = $namespaces[$prefix];
-    $path = fqcnToPath($class, $prefix);
+    $relativeClass = (0 === strpos($class, $prefix)) ? substr($class, strlen($prefix)) : $class;
+    $path = str_replace('\\', '/', $relativeClass) . '.php';
 
-    require $baseDirectory . '/' . $path;
+    require $rootDirectory . '/' . $baseDirectory . '/' . $path;
 });
