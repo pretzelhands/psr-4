@@ -1,17 +1,11 @@
 <?php
 
 $configuration = json_decode(
-    file_get_contents('conductor.json'),
+    file_get_contents(__DIR__ . '/' . 'conductor.json'),
     true
 );
 
 $namespaces = $configuration['autoload']['psr-4'];
-
-function fqcnToPath(string $fqcn, string $prefix) {
-    $relativeClass = ltrim($fqcn, $prefix);
-
-    return str_replace('\\', '/', $relativeClass) . '.php';
-}
 
 spl_autoload_register(function (string $class) use ($namespaces) {
     $prefix = strtok($class, '\\') . '\\';
@@ -20,8 +14,10 @@ spl_autoload_register(function (string $class) use ($namespaces) {
     // Return and hope some other autoloader handles it.
     if (!array_key_exists($prefix, $namespaces)) return;
 
-    $baseDirectory = $namespaces[$prefix];
-    $path = fqcnToPath($class, $prefix);
+    if (substr($class, 0, strlen($prefix)) == $prefix) {
+        $relativeClass = substr($class, strlen($prefix));
+    }
+    $path = str_replace('\\', '/', $relativeClass) . '.php';
 
-    require $baseDirectory . '/' . $path;
+    require_once $baseDirectory . '/' . $path;
 });
